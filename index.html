@@ -1,0 +1,185 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>With advisory lock by mceachen</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/main.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+
+      <header>
+        <h1>With advisory lock</h1>
+        <p>Advisory locking for ActiveRecord</p>
+      </header>
+
+      <div id="banner">
+        <span id="logo"></span>
+
+        <a href="https://github.com/mceachen/with_advisory_lock" class="button fork"><strong>View On GitHub</strong></a>
+        <div class="downloads">
+          <span>Downloads:</span>
+          <ul>
+            <li><a href="https://github.com/mceachen/with_advisory_lock/zipball/master" class="button">ZIP</a></li>
+            <li><a href="https://github.com/mceachen/with_advisory_lock/tarball/master" class="button">TAR</a></li>
+          </ul>
+        </div>
+      </div><!-- end banner -->
+
+    <div class="wrapper">
+      <nav>
+        <ul></ul>
+      </nav>
+      <section>
+        <h1>with_advisory_lock <a href="https://travis-ci.org/mceachen/with_advisory_lock"><img src="https://api.travis-ci.org/mceachen/with_advisory_lock.png?branch=master" alt="Build Status"></a>
+</h1>
+
+<p>Adds advisory locking to ActiveRecord 3.2.x.
+<a href="http://dev.mysql.com/doc/refman/5.0/en/miscellaneous-functions.html#function_get-lock">MySQL</a>
+and <a href="http://www.postgresql.org/docs/9.1/static/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS">PostgreSQL</a>
+are supported natively. SQLite resorts to file locking (which won't span hosts, of course!).</p>
+
+<h2>What's an "Advisory Lock"?</h2>
+
+<p>An advisory lock is a <a href="http://en.wikipedia.org/wiki/Mutual_exclusion">mutex</a> used to ensure no two
+processes run some process at the same time. When the advisory lock is powered by your database
+server, as long as it isn't SQLite, your mutex spans hosts.</p>
+
+<h2>Usage</h2>
+
+<p>Where <code>User</code> is an ActiveRecord model, and <code>lock_name</code> is some string:</p>
+
+<div class="highlight"><pre><span class="no">User</span><span class="o">.</span><span class="n">with_advisory_lock</span><span class="p">(</span><span class="n">lock_name</span><span class="p">)</span> <span class="k">do</span>
+  <span class="n">do_something_that_needs_locking</span>
+<span class="k">end</span>
+</pre></div>
+
+<h3>What happens</h3>
+
+<ol>
+<li>The thread will wait indefinitely until the lock is acquired.</li>
+<li>While inside the block, you will exclusively own the advisory lock.</li>
+<li>The lock will be released after your block ends, even if an exception is raised in the block.</li>
+</ol><h3>Lock wait timeouts</h3>
+
+<p>The second parameter for <code>with_advisory_lock</code> is <code>timeout_seconds</code>, and defaults to <code>nil</code>,
+which means wait indefinitely for the lock.</p>
+
+<p>If a non-nil value is provided, the block may not be invoked.</p>
+
+<p>The return value of <code>with_advisory_lock</code> will be the result of the yielded block,
+if the lock was able to be acquired and the block yielded, or <code>false</code>, if you provided
+a timeout_seconds value and the lock was not able to be acquired in time.</p>
+
+<h3>Transactions and Advisory Locks</h3>
+
+<p>Advisory locks with MySQL and PostgreSQL ignore database transaction boundaries.</p>
+
+<p>You will want to wrap your block within a transaction to ensure consistency.</p>
+
+<h3>MySQL doesn't support nesting</h3>
+
+<p>With MySQL (at least &lt;= v5.5), if you ask for a <em>different</em> advisory lock within a <code>with_advisory_lock</code> block,
+you will be releasing the parent lock (!!!). A <code>NestedAdvisoryLockError</code>will be raised
+in this case. If you ask for the same lock name, <code>with_advisory_lock</code> won't ask for the
+lock again, and the block given will be yielded to.</p>
+
+<h2>Installation</h2>
+
+<p>Add this line to your application's Gemfile:</p>
+
+<div class="highlight"><pre><span class="n">gem</span> <span class="s1">'with_advisory_lock'</span>
+</pre></div>
+
+<p>And then execute:</p>
+
+<pre><code>$ bundle
+</code></pre>
+
+<h2>Lock Types</h2>
+
+<p>First off, know that there are <strong>lots</strong> of different kinds of locks available to you. <strong>Pick the
+finest-grain lock that ensures correctness.</strong> If you choose a lock that is too coarse, you are
+unnecessarily blocking other processes.</p>
+
+<h3>Advisory locks</h3>
+
+<p>These are named mutexes that are inherently "application level"—it is up to the application
+to acquire, run a critical code section, and release the advisory lock.</p>
+
+<h3>Row-level locks</h3>
+
+<p>Whether <a href="http://api.rubyonrails.org/classes/ActiveRecord/Locking/Optimistic.html">optimistic</a>
+or <a href="http://api.rubyonrails.org/classes/ActiveRecord/Locking/Pessimistic.html">pessimistic</a>,
+row-level locks prevent concurrent modification to a given model.</p>
+
+<p><strong>If you're building a
+<a href="http://en.wikipedia.org/wiki/Create,_read,_update_and_delete">CRUD</a> application, this will be your
+most commonly used lock.</strong></p>
+
+<h3>Table-level locks</h3>
+
+<p>Provided through something like the <a href="https://github.com/mceachen/monogamy">monogamy</a>
+gem, these prevent concurrent access to <strong>any instance of a model</strong>. Their coarseness means they
+aren't going to be commonly applicable, and they can be a source of
+<a href="http://en.wikipedia.org/wiki/Deadlock">deadlocks</a>.</p>
+
+<h2>Changelog</h2>
+
+<h3>0.0.6</h3>
+
+<ul>
+<li>Only require ActiveRecord &gt;= 3.0.x</li>
+<li>Fixed MySQL error reporting</li>
+</ul><h3>0.0.5</h3>
+
+<ul>
+<li>Asking for the currently acquired advisory lock doesn't re-ask for the lock now.</li>
+<li>Introduced NestedAdvisoryLockError when asking for different, nested advisory locksMySQL</li>
+</ul><h3>0.0.4</h3>
+
+<ul>
+<li>Moved require into on_load, which should speed loading when AR doesn't have to spin up</li>
+</ul><h3>0.0.3</h3>
+
+<ul>
+<li>Fought with ActiveRecord 3.0.x and 3.1.x. You don't want them if you use threads—they fail
+predictably.</li>
+</ul><h3>0.0.2</h3>
+
+<ul>
+<li>Added warning log message for nested MySQL lock calls</li>
+<li>Randomized lock wait time, which can help ameliorate lock contention</li>
+</ul><h3>0.0.1</h3>
+
+<ul>
+<li>First whack</li>
+</ul>
+      </section>
+      <footer>
+        <p>Project maintained by <a href="https://github.com/mceachen">mceachen</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-38750440-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
