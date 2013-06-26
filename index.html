@@ -39,21 +39,27 @@
         <ul></ul>
       </nav>
       <section>
-        <h1>with_advisory_lock <a href="https://travis-ci.org/mceachen/with_advisory_lock"><img src="https://api.travis-ci.org/mceachen/with_advisory_lock.png?branch=master" alt="Build Status"></a>
-</h1>
+        <h1>
+<a name="with_advisory_lock" class="anchor" href="#with_advisory_lock"><span class="octicon octicon-link"></span></a>with_advisory_lock</h1>
 
-<p>Adds advisory locking to ActiveRecord 3.2.x.
+<p>Adds advisory locking (mutexes) to ActiveRecord 3.0, 3.1, 3.2, and 4.0.0 when used with
 <a href="http://dev.mysql.com/doc/refman/5.0/en/miscellaneous-functions.html#function_get-lock">MySQL</a>
-and <a href="http://www.postgresql.org/docs/9.1/static/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS">PostgreSQL</a>
-are supported natively. SQLite resorts to file locking (which won't span hosts, of course!).</p>
+or <a href="http://www.postgresql.org/docs/9.1/static/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS">PostgreSQL</a>.
+SQLite resorts to file locking.</p>
 
-<h2>What's an "Advisory Lock"?</h2>
+<p><a href="https://travis-ci.org/mceachen/with_advisory_lock"><img src="https://api.travis-ci.org/mceachen/with_advisory_lock.png?branch=master" alt="Build Status"></a>
+<a href="http://rubygems.org/gems/with_advisory_lock"><img src="https://badge.fury.io/rb/with_advisory_lock.png" alt="Gem Version"></a>
+<a href="https://codeclimate.com/github/mceachen/with_advisory_lock"><img src="https://codeclimate.com/github/mceachen/with_advisory_lock.png" alt="Code Climate"></a></p>
+
+<h2>
+<a name="whats-an-advisory-lock" class="anchor" href="#whats-an-advisory-lock"><span class="octicon octicon-link"></span></a>What's an "Advisory Lock"?</h2>
 
 <p>An advisory lock is a <a href="http://en.wikipedia.org/wiki/Mutual_exclusion">mutex</a> used to ensure no two
 processes run some process at the same time. When the advisory lock is powered by your database
 server, as long as it isn't SQLite, your mutex spans hosts.</p>
 
-<h2>Usage</h2>
+<h2>
+<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
 
 <p>Where <code>User</code> is an ActiveRecord model, and <code>lock_name</code> is some string:</p>
 
@@ -62,13 +68,15 @@ server, as long as it isn't SQLite, your mutex spans hosts.</p>
 <span class="k">end</span>
 </pre></div>
 
-<h3>What happens</h3>
+<h3>
+<a name="what-happens" class="anchor" href="#what-happens"><span class="octicon octicon-link"></span></a>What happens</h3>
 
 <ol>
 <li>The thread will wait indefinitely until the lock is acquired.</li>
 <li>While inside the block, you will exclusively own the advisory lock.</li>
 <li>The lock will be released after your block ends, even if an exception is raised in the block.</li>
-</ol><h3>Lock wait timeouts</h3>
+</ol><h3>
+<a name="lock-wait-timeouts" class="anchor" href="#lock-wait-timeouts"><span class="octicon octicon-link"></span></a>Lock wait timeouts</h3>
 
 <p>The second parameter for <code>with_advisory_lock</code> is <code>timeout_seconds</code>, and defaults to <code>nil</code>,
 which means wait indefinitely for the lock.</p>
@@ -79,20 +87,8 @@ which means wait indefinitely for the lock.</p>
 if the lock was able to be acquired and the block yielded, or <code>false</code>, if you provided
 a timeout_seconds value and the lock was not able to be acquired in time.</p>
 
-<h3>Transactions and Advisory Locks</h3>
-
-<p>Advisory locks with MySQL and PostgreSQL ignore database transaction boundaries.</p>
-
-<p>You will want to wrap your block within a transaction to ensure consistency.</p>
-
-<h3>MySQL doesn't support nesting</h3>
-
-<p>With MySQL (at least &lt;= v5.5), if you ask for a <em>different</em> advisory lock within a <code>with_advisory_lock</code> block,
-you will be releasing the parent lock (!!!). A <code>NestedAdvisoryLockError</code>will be raised
-in this case. If you ask for the same lock name, <code>with_advisory_lock</code> won't ask for the
-lock again, and the block given will be yielded to.</p>
-
-<h2>Installation</h2>
+<h2>
+<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
 
 <p>Add this line to your application's Gemfile:</p>
 
@@ -104,18 +100,21 @@ lock again, and the block given will be yielded to.</p>
 <pre><code>$ bundle
 </code></pre>
 
-<h2>Lock Types</h2>
+<h2>
+<a name="lock-types" class="anchor" href="#lock-types"><span class="octicon octicon-link"></span></a>Lock Types</h2>
 
 <p>First off, know that there are <strong>lots</strong> of different kinds of locks available to you. <strong>Pick the
 finest-grain lock that ensures correctness.</strong> If you choose a lock that is too coarse, you are
 unnecessarily blocking other processes.</p>
 
-<h3>Advisory locks</h3>
+<h3>
+<a name="advisory-locks" class="anchor" href="#advisory-locks"><span class="octicon octicon-link"></span></a>Advisory locks</h3>
 
 <p>These are named mutexes that are inherently "application level"—it is up to the application
 to acquire, run a critical code section, and release the advisory lock.</p>
 
-<h3>Row-level locks</h3>
+<h3>
+<a name="row-level-locks" class="anchor" href="#row-level-locks"><span class="octicon octicon-link"></span></a>Row-level locks</h3>
 
 <p>Whether <a href="http://api.rubyonrails.org/classes/ActiveRecord/Locking/Optimistic.html">optimistic</a>
 or <a href="http://api.rubyonrails.org/classes/ActiveRecord/Locking/Pessimistic.html">pessimistic</a>,
@@ -125,40 +124,119 @@ row-level locks prevent concurrent modification to a given model.</p>
 <a href="http://en.wikipedia.org/wiki/Create,_read,_update_and_delete">CRUD</a> application, this will be your
 most commonly used lock.</strong></p>
 
-<h3>Table-level locks</h3>
+<h3>
+<a name="table-level-locks" class="anchor" href="#table-level-locks"><span class="octicon octicon-link"></span></a>Table-level locks</h3>
 
 <p>Provided through something like the <a href="https://github.com/mceachen/monogamy">monogamy</a>
 gem, these prevent concurrent access to <strong>any instance of a model</strong>. Their coarseness means they
 aren't going to be commonly applicable, and they can be a source of
 <a href="http://en.wikipedia.org/wiki/Deadlock">deadlocks</a>.</p>
 
-<h2>Changelog</h2>
+<h2>
+<a name="faq" class="anchor" href="#faq"><span class="octicon octicon-link"></span></a>FAQ</h2>
 
-<h3>0.0.6</h3>
+<h3>
+<a name="transactions-and-advisory-locks" class="anchor" href="#transactions-and-advisory-locks"><span class="octicon octicon-link"></span></a>Transactions and Advisory Locks</h3>
+
+<p>Advisory locks with MySQL and PostgreSQL ignore database transaction boundaries.</p>
+
+<p>You will want to wrap your block within a transaction to ensure consistency.</p>
+
+<h3>
+<a name="mysql-doesnt-support-nesting" class="anchor" href="#mysql-doesnt-support-nesting"><span class="octicon octicon-link"></span></a>MySQL doesn't support nesting</h3>
+
+<p>With MySQL (at least &lt;= v5.5), if you ask for a <em>different</em> advisory lock within a <code>with_advisory_lock</code> block,
+you will be releasing the parent lock (!!!). A <code>NestedAdvisoryLockError</code>will be raised
+in this case. If you ask for the same lock name, <code>with_advisory_lock</code> won't ask for the
+lock again, and the block given will be yielded to.</p>
+
+<h3>
+<a name="there-are-many-lock--files-in-my-project-directory-after-test-runs" class="anchor" href="#there-are-many-lock--files-in-my-project-directory-after-test-runs"><span class="octicon octicon-link"></span></a>There are many <code>lock-*</code> files in my project directory after test runs</h3>
+
+<p>This is expected if you aren't using MySQL or Postgresql for your tests.
+See <a href="https://github.com/mceachen/with_advisory_lock/issues/3">issue 3</a>.</p>
+
+<p>SQLite doesn't have advisory locks, so we resort to file locking, which will only work
+if the <code>FLOCK_DIR</code> is set consistently for all ruby processes.</p>
+
+<p>In your <code>spec_helper.rb</code> or <code>minitest_helper.rb</code>, add a <code>before</code> and <code>after</code> block:</p>
+
+<div class="highlight"><pre><span class="n">before</span> <span class="k">do</span>
+  <span class="no">ENV</span><span class="o">[</span><span class="s1">'FLOCK_DIR'</span><span class="o">]</span> <span class="o">=</span> <span class="no">Dir</span><span class="o">.</span><span class="n">mktmpdir</span>
+<span class="k">end</span>
+
+<span class="n">after</span> <span class="k">do</span>
+  <span class="no">FileUtils</span><span class="o">.</span><span class="n">remove_entry_secure</span> <span class="no">ENV</span><span class="o">[</span><span class="s1">'FLOCK_DIR'</span><span class="o">]</span>
+<span class="k">end</span>
+</pre></div>
+
+<h2>
+<a name="changelog" class="anchor" href="#changelog"><span class="octicon octicon-link"></span></a>Changelog</h2>
+
+<h3>
+<a name="009" class="anchor" href="#009"><span class="octicon octicon-link"></span></a>0.0.9</h3>
+
+<ul>
+<li>Merged in Postgis Adapter Support to address <a href="https://github.com/mceachen/with_advisory_lock/issues/7">issue 7</a>
+Thanks for the pull request, <a href="https://github.com/seuros">Abdelkader Boudih</a>!</li>
+<li>The database switching code had to be duplicated by <a href="https://github.com/mceachen/closure_tree">Closure Tree</a>,
+so I extracted a new <code>WithAdvisoryLock::DatabaseAdapterSupport</code> one-trick pony.</li>
+<li>Builds were failing on Travis, so I introduced a global lock prefix that can be set with the
+<code>WITH_ADVISORY_LOCK_PREFIX</code> environment variable. I'm not going to advertise this feature yet.
+It's a secret. Only you and I know, now. <em>shhh</em>
+</li>
+</ul><h3>
+<a name="008" class="anchor" href="#008"><span class="octicon octicon-link"></span></a>0.0.8</h3>
+
+<ul>
+<li>Addressed <a href="https://github.com/mceachen/with_advisory_lock/issues/5">issue 5</a> by
+using a deterministic hash for Postgresql + MRI &gt;= 1.9.
+Thanks for the pull request, <a href="https://github.com/jturkel">Joel Turkel</a>!</li>
+<li>Addressed <a href="https://github.com/mceachen/with_advisory_lock/issues/2">issue 2</a> by
+using a cache-busting query for MySQL and Postgres to deal with AR value caching bug.
+Thanks for the pull request, <a href="https://github.com/sposmen">Jaime Giraldo</a>!</li>
+<li>Addressed <a href="https://github.com/mceachen/with_advisory_lock/issues/4">issue 4</a> by
+adding support for <code>em-postgresql-adapter</code>.
+Thanks, <a href="https://github.com/lestercsp">lestercsp</a>!</li>
+</ul><p>(Hey, github—your notifications are WAY too easy to ignore!)</p>
+
+<h3>
+<a name="007" class="anchor" href="#007"><span class="octicon octicon-link"></span></a>0.0.7</h3>
+
+<ul>
+<li>Added Travis tests for Rails 3.0, 3.1, 3.2, and 4.0</li>
+<li>Fixed MySQL bug with select_value returning a string instead of an integer when using AR 3.0.x</li>
+</ul><h3>
+<a name="006" class="anchor" href="#006"><span class="octicon octicon-link"></span></a>0.0.6</h3>
 
 <ul>
 <li>Only require ActiveRecord &gt;= 3.0.x</li>
 <li>Fixed MySQL error reporting</li>
-</ul><h3>0.0.5</h3>
+</ul><h3>
+<a name="005" class="anchor" href="#005"><span class="octicon octicon-link"></span></a>0.0.5</h3>
 
 <ul>
 <li>Asking for the currently acquired advisory lock doesn't re-ask for the lock now.</li>
 <li>Introduced NestedAdvisoryLockError when asking for different, nested advisory locksMySQL</li>
-</ul><h3>0.0.4</h3>
+</ul><h3>
+<a name="004" class="anchor" href="#004"><span class="octicon octicon-link"></span></a>0.0.4</h3>
 
 <ul>
 <li>Moved require into on_load, which should speed loading when AR doesn't have to spin up</li>
-</ul><h3>0.0.3</h3>
+</ul><h3>
+<a name="003" class="anchor" href="#003"><span class="octicon octicon-link"></span></a>0.0.3</h3>
 
 <ul>
 <li>Fought with ActiveRecord 3.0.x and 3.1.x. You don't want them if you use threads—they fail
 predictably.</li>
-</ul><h3>0.0.2</h3>
+</ul><h3>
+<a name="002" class="anchor" href="#002"><span class="octicon octicon-link"></span></a>0.0.2</h3>
 
 <ul>
 <li>Added warning log message for nested MySQL lock calls</li>
 <li>Randomized lock wait time, which can help ameliorate lock contention</li>
-</ul><h3>0.0.1</h3>
+</ul><h3>
+<a name="001" class="anchor" href="#001"><span class="octicon octicon-link"></span></a>0.0.1</h3>
 
 <ul>
 <li>First whack</li>
@@ -166,7 +244,7 @@ predictably.</li>
       </section>
       <footer>
         <p>Project maintained by <a href="https://github.com/mceachen">mceachen</a></p>
-        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></small></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></small></p>
       </footer>
     </div>
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
