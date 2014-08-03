@@ -42,14 +42,15 @@
         <h1>
 <a name="with_advisory_lock" class="anchor" href="#with_advisory_lock"><span class="octicon octicon-link"></span></a>with_advisory_lock</h1>
 
-<p>Adds advisory locking (mutexes) to ActiveRecord 3.0, 3.1, 3.2, and 4.0.0 when used with
+<p>Adds advisory locking (mutexes) to ActiveRecord 3.2, 4.0 and 4.1 when used with
 <a href="http://dev.mysql.com/doc/refman/5.0/en/miscellaneous-functions.html#function_get-lock">MySQL</a>
-or <a href="http://www.postgresql.org/docs/9.1/static/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS">PostgreSQL</a>.
+or <a href="http://www.postgresql.org/docs/9.3/static/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS">PostgreSQL</a>.
 SQLite resorts to file locking.</p>
 
 <p><a href="https://travis-ci.org/mceachen/with_advisory_lock"><img src="https://api.travis-ci.org/mceachen/with_advisory_lock.png?branch=master" alt="Build Status"></a>
 <a href="http://rubygems.org/gems/with_advisory_lock"><img src="https://badge.fury.io/rb/with_advisory_lock.png" alt="Gem Version"></a>
-<a href="https://codeclimate.com/github/mceachen/with_advisory_lock"><img src="https://codeclimate.com/github/mceachen/with_advisory_lock.png" alt="Code Climate"></a></p>
+<a href="https://codeclimate.com/github/mceachen/with_advisory_lock"><img src="https://codeclimate.com/github/mceachen/with_advisory_lock.png" alt="Code Climate"></a>
+<a href="https://gemnasium.com/mceachen/with_advisory_lock"><img src="https://gemnasium.com/mceachen/with_advisory_lock.png" alt="Dependency Status"></a></p>
 
 <h2>
 <a name="whats-an-advisory-lock" class="anchor" href="#whats-an-advisory-lock"><span class="octicon octicon-link"></span></a>What's an "Advisory Lock"?</h2>
@@ -63,7 +64,7 @@ server, as long as it isn't SQLite, your mutex spans hosts.</p>
 
 <p>Where <code>User</code> is an ActiveRecord model, and <code>lock_name</code> is some string:</p>
 
-<div class="highlight"><pre><span class="no">User</span><span class="o">.</span><span class="n">with_advisory_lock</span><span class="p">(</span><span class="n">lock_name</span><span class="p">)</span> <span class="k">do</span>
+<div class="highlight highlight-ruby"><pre><span class="no">User</span><span class="o">.</span><span class="n">with_advisory_lock</span><span class="p">(</span><span class="n">lock_name</span><span class="p">)</span> <span class="k">do</span>
   <span class="n">do_something_that_needs_locking</span>
 <span class="k">end</span>
 </pre></div>
@@ -81,18 +82,36 @@ server, as long as it isn't SQLite, your mutex spans hosts.</p>
 <p>The second parameter for <code>with_advisory_lock</code> is <code>timeout_seconds</code>, and defaults to <code>nil</code>,
 which means wait indefinitely for the lock.</p>
 
-<p>If a non-nil value is provided, the block may not be invoked.</p>
+<p>A value of zero will try the lock only once. If the lock is acquired, the block
+will be yielded to. If the lock is currently being held, the block will not be called.</p>
+
+<p>Note that if a non-nil value is provided for <code>timeout_seconds</code>, the block will not be invoked if
+the lock cannot be acquired within that timeframe.</p>
+
+<h3>
+<a name="return-values" class="anchor" href="#return-values"><span class="octicon octicon-link"></span></a>Return values</h3>
 
 <p>The return value of <code>with_advisory_lock</code> will be the result of the yielded block,
 if the lock was able to be acquired and the block yielded, or <code>false</code>, if you provided
 a timeout_seconds value and the lock was not able to be acquired in time.</p>
+
+<h3>
+<a name="testing-for-the-current-lock-status" class="anchor" href="#testing-for-the-current-lock-status"><span class="octicon octicon-link"></span></a>Testing for the current lock status</h3>
+
+<p>If you needed to check if the advisory lock is currently being held, you can call
+<code>Tag.advisory_lock_exists?("foo")</code>, but realize the lock can be acquired between the time you
+test for the lock, and the time you try to acquire the lock.</p>
+
+<p>If you want to see if the current Thread is holding a lock, you can call <code>Tag.current_advisory_lock</code>
+which will return the name of the current lock. If no lock is currently held,
+<code>.current_advisory_lock</code> returns <code>nil</code>.</p>
 
 <h2>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
 
 <p>Add this line to your application's Gemfile:</p>
 
-<div class="highlight"><pre><span class="n">gem</span> <span class="s1">'with_advisory_lock'</span>
+<div class="highlight highlight-ruby"><pre><span class="n">gem</span> <span class="s1">'with_advisory_lock'</span>
 </pre></div>
 
 <p>And then execute:</p>
@@ -161,7 +180,7 @@ if the <code>FLOCK_DIR</code> is set consistently for all ruby processes.</p>
 
 <p>In your <code>spec_helper.rb</code> or <code>minitest_helper.rb</code>, add a <code>before</code> and <code>after</code> block:</p>
 
-<div class="highlight"><pre><span class="n">before</span> <span class="k">do</span>
+<div class="highlight highlight-ruby"><pre><span class="n">before</span> <span class="k">do</span>
   <span class="no">ENV</span><span class="o">[</span><span class="s1">'FLOCK_DIR'</span><span class="o">]</span> <span class="o">=</span> <span class="no">Dir</span><span class="o">.</span><span class="n">mktmpdir</span>
 <span class="k">end</span>
 
@@ -174,6 +193,35 @@ if the <code>FLOCK_DIR</code> is set consistently for all ruby processes.</p>
 <a name="changelog" class="anchor" href="#changelog"><span class="octicon octicon-link"></span></a>Changelog</h2>
 
 <h3>
+<a name="200" class="anchor" href="#200"><span class="octicon octicon-link"></span></a>2.0.0</h3>
+
+<ul>
+<li>Lock timeouts of 0 now attempt the lock once, as per suggested by 
+<a href="https://github.com/jonleighton">Jon Leighton</a> and implemented by 
+<a href="https://github.com/seuros">Abdelkader Boudih</a>. Thanks to both of you!</li>
+<li>
+<a href="https://github.com/mceachen/with_advisory_lock/pull/11">Pull request 11</a> 
+fixed a downstream issue with jruby support! Thanks, <a href="https://github.com/ozzyaaron">Aaron Todd</a>!</li>
+<li>Added Travis tests for jruby</li>
+<li>Dropped support for Rails 3.0, 3.1, and Ruby 1.8.7, as they are no longer
+receiving security patches. See <a href="http://rubyonrails.org/security/">http://rubyonrails.org/security/</a> for more information. 
+This required the major version bump.</li>
+<li>Refactored <code>advisory_lock_exists?</code> to use existing functionality</li>
+<li>Fixed sqlite's implementation so parallel tests could be run against it </li>
+</ul><h3>
+<a name="100" class="anchor" href="#100"><span class="octicon octicon-link"></span></a>1.0.0</h3>
+
+<ul>
+<li>Releasing 1.0.0. The interface will be stable.</li>
+<li>Added <code>advisory_lock_exists?</code>. Thanks, <a href="https://github.com/barelyknown">Sean Devine</a>, for the
+great pull request!</li>
+<li>Added Travis test for Rails 4.1</li>
+</ul><h3>
+<a name="0010" class="anchor" href="#0010"><span class="octicon octicon-link"></span></a>0.0.10</h3>
+
+<ul>
+<li>Explicitly added MIT licensing to the gemspec.</li>
+</ul><h3>
 <a name="009" class="anchor" href="#009"><span class="octicon octicon-link"></span></a>0.0.9</h3>
 
 <ul>
