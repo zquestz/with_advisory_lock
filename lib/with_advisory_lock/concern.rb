@@ -27,7 +27,7 @@ module WithAdvisoryLock
         lock_stack_key && lock_stack_key[0]
       end
 
-      def remove_advisory_lock(lock_name)
+      def release_advisory_lock(lock_name)
         impl = impl_class.new(connection, lock_name, 0)
         impl.release_lock
       end
