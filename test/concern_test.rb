@@ -17,4 +17,7 @@ describe "with_advisory_lock.concern" do
     assert Label.new.respond_to?(:advisory_lock_exists?)
   end
 
+  it "adds remove_advisory_lock to ActiveRecord classes" do
+    assert Label.new.respond_to?(:remove_advisory_lock)
+  end
 end
